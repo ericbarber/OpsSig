@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: opssig_signal_watch
-    container_name: opssig-signalwatch
+    image: opssig_signal_watch_backend
+    container_name: opssig-signalwatch-backend
     environment:
       - DELTA_SPARK_VERSION=3.1.0
       - DELTALAKE_VERSION=0.16.4
@@ -14,5 +14,6 @@ services:
       - ROAPI_VERSION=0.11.1
     ports:
       - "8888:8888"  # Port for JupyterLab
-    # volumes:
-    #   - ./workdir:/opt/spark/work-dir
+    volumes:
+      # - ./delta:/tmp/delta:rw
+      - ./delta:/mnt/delta:rw

@@ -21,12 +21,13 @@
 # Note: Python version in this image is 3.9.2 and is available as `python3`.
 # Note: PySpark v3.5.0 (https://spark.apache.org/docs/latest/api/python/getting_started/install.html#dependencies)
 ARG BASE_CONTAINER=spark:3.5.1-scala2.12-java17-python3-ubuntu
-FROM $BASE_CONTAINER as spark
-FROM spark as delta
+FROM $BASE_CONTAINER AS spark
+FROM spark AS delta
 
 # Authors (add your name when updating the Dockerfile)
 LABEL authors="Eric Barber"
 
+# Stage 1: Delta Table, Spark, Python, Jupyter install
 # Docker image was created and tested with the versions of following packages.
 USER root
 ARG DELTA_SPARK_VERSION="3.1.0"
@@ -47,7 +48,7 @@ RUN pip install --quiet --no-cache-dir delta-spark==${DELTA_SPARK_VERSION} \
   roapi==${ROAPI_VERSION}
 
 # Environment variables
-FROM delta as startup
+FROM delta AS startup
 ARG NBuser=NBuser
 ARG GROUP=NBuser
 ARG WORKDIR=/opt/spark/work-dir
@@ -58,23 +59,33 @@ RUN groupadd -r ${GROUP} && useradd -r -m -g ${GROUP} ${NBuser}
 RUN apt -qq update
 RUN apt -qq -y install vim curl tree
 
-# Add OpsSig to startup
-RUN mkdir -p ${WORKDIR}/OpsSig
-COPY --chown=${NBuser} ../signal_watch "${WORKDIR}/OpsSig"
-
 # Configure ownership
 COPY --chown=${NBuser} docker/docker_startup.sh "${WORKDIR}"
 # COPY --chown=${NBuser} quickstart.ipynb "${WORKDIR}"
 COPY --chown=${NBuser} docker/rs/ "${WORKDIR}/rs"
 RUN chown -R ${NBuser}:${GROUP} /home/${NBuser}/ \
-  && chown -R ${NBuser}:${GROUP} ${WORKDIR}
+  && chown -R ${NBuser}:${GROUP} ${WORKDIR} \
+  && chown -R ${NBuser}:${GROUP} /mnt
 
-# Rust install
+# Stage 2: Rust install
 USER ${NBuser}
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 # moved the source command into the bash process in the entrypoint docker_startup.sh
 #RUN source "$HOME/.cargo/env"
+
+# Stage 3: Add application code
+# Add config to startup
+RUN mkdir -p ${WORKDIR}/config
+COPY --chown=${NBuser} ../config "${WORKDIR}/config"
+
+# Add backend to startup
+RUN mkdir -p ${WORKDIR}/backend
+COPY --chown=${NBuser} ../backend "${WORKDIR}/backend"
+
+# Add OpsSig to startup
+RUN mkdir -p ${WORKDIR}/OpsSig
+COPY --chown=${NBuser} ../signal_watch "${WORKDIR}/OpsSig"
 
 # Establish entrypoint
 ENTRYPOINT ["bash", "docker_startup.sh"]
