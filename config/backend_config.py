@@ -2,8 +2,8 @@
 table_paths = {
     "departments": "/mnt/delta/departments",
     "features": "/mnt/delta/features",
-    "controls": "/mnt/delta/control_analysis",
-    "control_runs": "/mnt/delta/control_analysis",
+    "controls": "/mnt/delta/controls",
+    "control_runs": "/mnt/delta/control_runs",
     "signal_detection": "/mnt/delta/signal_detection",
     "notifications": "/mnt/delta/notifications"
 }
