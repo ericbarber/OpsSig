@@ -6,7 +6,7 @@ from config.spark_setup import get_spark_session
 # Initialize Spark session
 spark = get_spark_session()
 
-# 1. Create the features table
+# Create the features table
 def create_features_table():
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS delta.`{table_paths['features']}`
@@ -16,7 +16,7 @@ def create_features_table():
             feature_name STRING,
             feature_version STRING,
             feature_query_id STRING,
-            feature_query_notebook STRING,
+            feature_logic STRING,
             triage_team ARRAY<STRING>,
             created_timestamp TIMESTAMP,
             modified_timestamp TIMESTAMP
@@ -26,10 +26,17 @@ def create_features_table():
     """)
     print("Features table created successfully.")
 
-# 2. Insert data into the features table
+# Select details departments table
+def get_feature_by_id(feature_id):
+    return spark.sql(f"""
+        SELECT * FROM `{table_paths['features']}`
+        WHERE feature_id = '{feature_id}'
+    """)
+
+# Insert data into the features table
 def insert_feature_data(feature_data):
     # Convert list of data to DataFrame
-    df = spark.createDataFrame(feature_data, ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_query_notebook", "triage_team", "created_timestamp", "modified_timestamp"])
+    df = spark.createDataFrame(feature_data, ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_logic", "triage_team", "created_timestamp", "modified_timestamp"])
 
     # Insert into features table
     df.withColumn("created_timestamp", F.to_timestamp("created_timestamp")) \
@@ -40,7 +47,7 @@ def insert_feature_data(feature_data):
 
     print("Feature data inserted successfully.")
 
-# 3. Update data in the features table
+# Update data in the features table
 def update_feature_data(feature_id, new_feature_name, new_feature_version):
     # Define the update SQL
     spark.sql(f"""
@@ -53,7 +60,7 @@ def update_feature_data(feature_id, new_feature_name, new_feature_version):
     
     print(f"Feature {feature_id} updated successfully.")
 
-# 4. Delete data from the features table
+# Delete data from the features table
 def delete_feature(feature_id):
     # Delete from features table
     spark.sql(f"""
@@ -63,9 +70,9 @@ def delete_feature(feature_id):
     
     print(f"Feature {feature_id} deleted successfully.")
 
-# 5. Merge (upsert) data into the features table
+# Merge (upsert) data into the features table
 def merge_feature_data(feature_data):
-    df = spark.createDataFrame(feature_data, ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_query_notebook", "triage_team", "created_timestamp", "modified_timestamp"])
+    df = spark.createDataFrame(feature_data, ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_logic", "triage_team", "created_timestamp", "modified_timestamp"])
     
     # Merge new data into the table
     df.createOrReplaceTempView("source_table")
@@ -78,12 +85,12 @@ def merge_feature_data(feature_data):
           UPDATE SET target.feature_name = source.feature_name,
                      target.feature_version = source.feature_version,
                      target.feature_query_id = source.feature_query_id,
-                     target.feature_query_notebook = source.feature_query_notebook,
+                     target.feature_logic = source.feature_logic,
                      target.triage_team = source.triage_team,
                      target.modified_timestamp = current_timestamp()
         WHEN NOT MATCHED THEN
-          INSERT (department_id, feature_id, feature_name, feature_version, feature_query_id, feature_query_notebook, triage_team, created_timestamp, modified_timestamp)
-          VALUES (source.department_id, source.feature_id, source.feature_name, source.feature_version, source.feature_query_id, source.feature_query_notebook, source.triage_team, current_timestamp(), current_timestamp());
+          INSERT (department_id, feature_id, feature_name, feature_version, feature_query_id, feature_logic, triage_team, created_timestamp, modified_timestamp)
+          VALUES (source.department_id, source.feature_id, source.feature_name, source.feature_version, source.feature_query_id, source.feature_logic, source.triage_team, current_timestamp(), current_timestamp());
     """)
     
     print("Feature data merged (upserted) successfully.")
