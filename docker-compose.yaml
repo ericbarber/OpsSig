@@ -15,9 +15,7 @@ services:
     ports:
       - "8888:8888"  # Port for JupyterLab
     volumes:
-      # - ./delta:/tmp/delta:rw
       - ./delta:/mnt/delta:rw
-  
   delta-lake-test:
     build:
       context: .
@@ -34,4 +32,4 @@ services:
     ports:
       - "8890:8888"
     volumes:
-      - ./delta-test:/mnt/delta:rw
+      - ./delta/opssig-test:/mnt/delta:rw
