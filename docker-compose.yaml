@@ -17,3 +17,21 @@ services:
     volumes:
       # - ./delta:/tmp/delta:rw
       - ./delta:/mnt/delta:rw
+  
+  delta-lake-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.test
+    image: opssig_signal_watch_backend_test
+    container_name: opssig-signalwatch-backend-test
+    environment:
+      - DELTA_SPARK_VERSION=3.1.0
+      - DELTALAKE_VERSION=0.16.4
+      - JUPYTERLAB_VERSION=4.0.7
+      - PANDAS_VERSION=2.2.2
+      - MATPLOTLIB_VERSION=3.9.2
+      - ROAPI_VERSION=0.11.1
+    ports:
+      - "8890:8888"
+    volumes:
+      - ./delta-test:/mnt/delta:rw

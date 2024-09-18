@@ -36,16 +36,17 @@ ARG DELTALAKE_VERSION="0.16.4"
 ARG JUPYTERLAB_VERSION="4.0.7"
 # requires pandas >1.0.5, py4j>=0.10.9.7, pyarrow>=4.0.0
 ARG PANDAS_VERSION="2.2.2"
-ARG MATPLOTLOB_VERSION="3.9.2"
 ARG ROAPI_VERSION="0.11.1"
+
+ARG MATPLOTLOB_VERSION="3.9.2"
 
 # We are explicitly pinning the versions of various libraries which this Docker image runs on.
 RUN pip install --quiet --no-cache-dir delta-spark==${DELTA_SPARK_VERSION} \
   deltalake==${DELTALAKE_VERSION} \
   jupyterlab==${JUPYTERLAB_VERSION} \
   pandas==${PANDAS_VERSION} \
-  matplotlib==${MATPLOTLOB_VERSION} \
-  roapi==${ROAPI_VERSION}
+  roapi==${ROAPI_VERSION} \
+  matplotlib==${MATPLOTLOB_VERSION}
 
 # Environment variables
 FROM delta AS startup
@@ -74,6 +75,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 # moved the source command into the bash process in the entrypoint docker_startup.sh
 #RUN source "$HOME/.cargo/env"
 
+FROM startup AS migrate
 # Stage 3: Add application code
 # Add config to startup
 RUN mkdir -p ${WORKDIR}/config
@@ -84,8 +86,8 @@ RUN mkdir -p ${WORKDIR}/backend
 COPY --chown=${NBuser} ../backend "${WORKDIR}/backend"
 
 # Add OpsSig to startup
-RUN mkdir -p ${WORKDIR}/OpsSig
-COPY --chown=${NBuser} ../signal_watch "${WORKDIR}/OpsSig"
+RUN mkdir -p ${WORKDIR}/signal_watch
+COPY --chown=${NBuser} ../signal_watch "${WORKDIR}/signal_watch"
 
 # Establish entrypoint
 ENTRYPOINT ["bash", "docker_startup.sh"]
