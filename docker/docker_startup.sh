@@ -8,7 +8,7 @@ export DELTA_SPARK_VERSION='3.1.0'
 export DELTA_PACKAGE_VERSION=delta-spark_2.12:${DELTA_SPARK_VERSION}
 
 # Initialize delta tables
-python3 backend/Initialize_db.py
+python3 backend/initialize_db.py
 
 $SPARK_HOME/bin/pyspark \
   --packages io.delta:${DELTA_PACKAGE_VERSION} \
