@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from config.spark_setup import get_spark_session
 from config.backend_config import table_paths
 
@@ -9,6 +13,7 @@ from backend.tables.controls import create_controls_table
 spark = get_spark_session()
 
 def initialize_database():
+    print('\n####### Delta Tables #######\n')
     # Create necessary tables
     create_departments_table()
     create_features_table()
@@ -19,18 +24,17 @@ def initialize_database():
     check_tables()
     
 def check_tables():
-    print("\nChecking table existence and paths...\n")
+    print("\nDelta Tables: checking table existence and paths...\n")
 
     for table_name, table_path in table_paths.items():
         try:
             # Check if the Delta table exists
             df = spark.read.format("delta").load(table_path)
-            df.show(1)  # Just show the first row as a check
-            print(f"{table_name} exists at {table_path}")
+            print(f"\t{table_name} exists at {table_path}")
         except Exception as e:
-            print(f"{table_name} does not exist or could not be loaded: {e}")
+            print(f"\t{table_name} does not exist or could not be loaded: {e}")
 
 if __name__ == "__main__":
     initialize_database()
-    print("Database initialized successfully!")
+    print("Delta Tables: initialized successfully!")
 

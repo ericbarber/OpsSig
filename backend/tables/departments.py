@@ -6,7 +6,7 @@ from config.spark_setup import get_spark_session
 # Initialize Spark session
 spark = get_spark_session()
 
-# 1. Create the departments table
+# Create the departments table
 def create_departments_table():
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS delta.`{table_paths['departments']}`
@@ -25,10 +25,20 @@ def create_departments_table():
     """)
     print("Departments table created successfully.")
 
-# 2. Insert data into the departments table
+# Select details departments table
+def get_department_by_id(department_id):
+    return spark.sql(f"""
+        SELECT * FROM `{table_paths['departments']}`
+        WHERE department_id = '{department_id}'
+    """)
+
+# Insert data into the departments table
 def insert_department_data(department_data):
+    # Retrieve the schema from the Delta table
+    table_schema = spark.read.format("delta").load(table_paths['departments']).schema
+    
     # Convert list of data to DataFrame
-    df = spark.createDataFrame(department_data, ["department_id", "department_name", "lead_name", "lead_email", "point_of_contact_name", "point_of_contact_email", "created_timestamp", "modified_timestamp"])
+    df = spark.createDataFrame(department_data, schema=table_schema)
 
     # Insert into departments table
     df.withColumn("created_timestamp", F.to_timestamp("created_timestamp")) \
@@ -39,7 +49,7 @@ def insert_department_data(department_data):
 
     print("Department data inserted successfully.")
 
-# 3. Update data in the departments table
+# Update data in the departments table
 def update_department_data(department_id, new_lead_name, new_lead_email):
     # Define the update SQL
     spark.sql(f"""
@@ -52,7 +62,7 @@ def update_department_data(department_id, new_lead_name, new_lead_email):
     
     print(f"Department {department_id} updated successfully.")
 
-# 4. Delete data from the departments table
+# Delete data from the departments table
 def delete_department(department_id):
     # Delete from departments table
     spark.sql(f"""
@@ -62,7 +72,7 @@ def delete_department(department_id):
     
     print(f"Department {department_id} deleted successfully.")
 
-# 5. Merge (upsert) data into the departments table
+# Merge (upsert) data into the departments table
 def merge_department_data(department_data):
     df = spark.createDataFrame(department_data, ["department_id", "department_name", "lead_name", "lead_email", "point_of_contact_name", "point_of_contact_email", "created_timestamp", "modified_timestamp"])
     

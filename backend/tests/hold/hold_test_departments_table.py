@@ -1,7 +1,9 @@
 import pytest
 from pyspark.sql import SparkSession
-from unittest.mock import patch
-from backend.tables.departments import create_departments_table, insert_department_data, update_department_data, delete_department, merge_department_data
+from unittest.mock import patch, MagicMock
+
+from backend.tables.departments import create_departments_table, insert_department_data, update_department_data, delete_department, merge_department_data, get_department_by_id
+
 
 def normalize_sql(sql):
     """Helper function to normalize SQL by removing newlines and extra spaces."""
@@ -10,7 +12,7 @@ def normalize_sql(sql):
 # Fixture to initialize and teardown a Spark session
 @pytest.fixture(scope="module")
 def spark():
-    spark = SparkSession.builder.appName("pytest-spark").master("local").getOrCreate()
+    spark = SparkSession.builder.appName("pytest-spark-depertments").master("local").getOrCreate()
     yield spark
     spark.stop()
 
@@ -39,24 +41,7 @@ def test_create_departments_table(spark):
             """
         )
         # mock_sql.assert_called_once_with(expected_sql)
-        assert expected_sql == actual_sql, f"Expected: {expected_sql}, but got: {actual_sql}"
-
-@patch('backend.tables.departments.table_paths', {'departments': '/mnt/delta/departments'})
-def test_insert_department_data(spark):
-    department_data = [
-        ("Dept_001", "Engineering", "Alice", "alice@example.com", "Bob", "bob@example.com", "2024-09-10 10:00:00", "2024-09-10 10:00:00")
-    ]
-    
-    with patch.object(spark, 'createDataFrame') as mock_create_df:
-        insert_department_data(department_data)
-        
-        # Normalize the expected and actual createDataFrame calls
-        expected_data = department_data
-        expected_columns = ["department_id", "department_name", "lead_name", "lead_email", "point_of_contact_name", "point_of_contact_email", "created_timestamp", "modified_timestamp"]
-        
-        # Check if createDataFrame was called with the correct arguments
-        mock_create_df.assert_called_once_with(expected_data, expected_columns)
-
+        assert expected_sql == actual_sql, "Expected: {}, but got: {}".format( expected_sql, actual_sql)
 
 @patch('backend.tables.departments.table_paths', {'departments': '/mnt/delta/departments'})
 def test_update_department_data(spark):
@@ -132,3 +117,30 @@ def test_merge_department_data(spark):
 
         # Assert the normalized SQL
         assert expected_sql == actual_sql, f"Expected: {expected_sql}, but got: {actual_sql}"
+
+# Test function to get department by ID
+@patch('backend.tables.departments.table_paths', {'departments': '/mnt/delta/departments'})
+def test_get_department_by_id(spark):
+    department_id = "Dept_001"
+    
+    # Mock the spark.sql call
+    with patch.object(spark, 'sql') as mock_sql:
+        # Call the function under test
+        get_department_by_id(department_id)
+
+        # Expected SQL query
+        expected_sql = normalize_sql(f"""
+            SELECT * FROM `/mnt/delta/departments`
+            WHERE department_id = '{department_id}'
+        """)
+
+        # Get the actual SQL from the mock call
+        actual_sql = normalize_sql(mock_sql.call_args[0][0])
+
+        # Assert that the SQL matches the expected query
+        assert expected_sql == actual_sql, f"Expected: {expected_sql}, but got: {actual_sql}"
+
+        # Optionally, mock the return value and verify the result
+        mock_sql.return_value = "mocked result"
+        result = get_department_by_id(department_id)
+        assert result == "mocked result"

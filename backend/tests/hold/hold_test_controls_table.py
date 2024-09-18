@@ -10,7 +10,7 @@ def normalize_sql(sql):
 # Fixture to initialize and teardown a Spark session
 @pytest.fixture(scope="module")
 def spark():
-    spark = SparkSession.builder.appName("pytest-spark").master("local").getOrCreate()
+    spark = SparkSession.builder.appName("pytest-spark-controls").master("local").getOrCreate()
     yield spark
     spark.stop()
 

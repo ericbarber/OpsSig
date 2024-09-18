@@ -1,7 +1,7 @@
 import pytest
 from pyspark.sql import SparkSession
 from unittest.mock import patch
-from backend.tables.features import create_features_table, insert_feature_data, update_feature_data, delete_feature, merge_feature_data
+from backend.tables.features import create_features_table, insert_feature_data, update_feature_data, delete_feature, merge_feature_data, get_feature_by_id
 
 # Helper function to normalize SQL by removing newlines and extra spaces
 def normalize_sql(sql):
@@ -10,7 +10,7 @@ def normalize_sql(sql):
 # Fixture to initialize and teardown a Spark session
 @pytest.fixture(scope="module")
 def spark():
-    spark = SparkSession.builder.appName("pytest-spark").master("local").getOrCreate()
+    spark = SparkSession.builder.appName("pytest-spark-features").master("local").getOrCreate()
     yield spark
     spark.stop()
 
@@ -29,7 +29,7 @@ def test_create_features_table(spark):
                 feature_name STRING,
                 feature_version STRING,
                 feature_query_id STRING,
-                feature_query_notebook STRING,
+                feature_logic STRING,
                 triage_team ARRAY<STRING>,
                 created_timestamp TIMESTAMP,
                 modified_timestamp TIMESTAMP
@@ -49,7 +49,7 @@ def test_insert_feature_data(spark):
     
     with patch.object(spark, 'createDataFrame') as mock_create_df:
         insert_feature_data(feature_data)
-        expected_columns = ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_query_notebook", "triage_team", "created_timestamp", "modified_timestamp"]
+        expected_columns = ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_logic", "triage_team", "created_timestamp", "modified_timestamp"]
         
         mock_create_df.assert_called_once_with(feature_data, expected_columns)
 
@@ -100,7 +100,7 @@ def test_merge_feature_data(spark):
     with patch.object(spark, 'createDataFrame') as mock_create_df, patch.object(spark, 'sql') as mock_sql:
         merge_feature_data(feature_data)
         
-        expected_columns = ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_query_notebook", "triage_team", "created_timestamp", "modified_timestamp"]
+        expected_columns = ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_logic", "triage_team", "created_timestamp", "modified_timestamp"]
         mock_create_df.assert_called_once_with(feature_data, expected_columns)
         
         expected_sql = normalize_sql("""
@@ -111,13 +111,41 @@ def test_merge_feature_data(spark):
               UPDATE SET target.feature_name = source.feature_name,
                          target.feature_version = source.feature_version,
                          target.feature_query_id = source.feature_query_id,
-                         target.feature_query_notebook = source.feature_query_notebook,
+                         target.feature_logic = source.feature_logic,
                          target.triage_team = source.triage_team,
                          target.modified_timestamp = current_timestamp()
             WHEN NOT MATCHED THEN
-              INSERT (department_id, feature_id, feature_name, feature_version, feature_query_id, feature_query_notebook, triage_team, created_timestamp, modified_timestamp)
-              VALUES (source.department_id, source.feature_id, source.feature_name, source.feature_version, source.feature_query_id, source.feature_query_notebook, source.triage_team, current_timestamp(), current_timestamp());
+              INSERT (department_id, feature_id, feature_name, feature_version, feature_query_id, feature_logic, triage_team, created_timestamp, modified_timestamp)
+              VALUES (source.department_id, source.feature_id, source.feature_name, source.feature_version, source.feature_query_id, source.feature_logic, source.triage_team, current_timestamp(), current_timestamp());
         """)
         
         actual_sql = normalize_sql(mock_sql.call_args[0][0])
         assert expected_sql == actual_sql, f"Expected: {expected_sql}, but got: {actual_sql}"
+
+
+# Test function to get feature by ID
+@patch('backend.tables.features.table_paths', {'features': '/mnt/delta/features'})
+def test_get_feature_by_id(spark):
+    feature_id = "Dept_001"
+    
+    # Mock the spark.sql call
+    with patch.object(spark, 'sql') as mock_sql:
+        # Call the function under test
+        get_feature_by_id(feature_id)
+
+        # Expected SQL query
+        expected_sql = normalize_sql(f"""
+            SELECT * FROM `/mnt/delta/features`
+            WHERE feature_id = '{feature_id}'
+        """)
+
+        # Get the actual SQL from the mock call
+        actual_sql = normalize_sql(mock_sql.call_args[0][0])
+
+        # Assert that the SQL matches the expected query
+        assert expected_sql == actual_sql, f"Expected: {expected_sql}, but got: {actual_sql}"
+
+        # Optionally, mock the return value and verify the result
+        mock_sql.return_value = "mocked result"
+        result = get_feature_by_id(feature_id)
+        assert result == "mocked result"
