@@ -9,6 +9,9 @@ export PYSPARK_DRIVER_PYTHON_OPTS='lab --ip=0.0.0.0 --no-browser'
 export DELTA_SPARK_VERSION='3.1.0'
 export DELTA_PACKAGE_VERSION=delta-spark_2.12:${DELTA_SPARK_VERSION}
 
+# Initialize delta tables
+python3 backend/initialize_db.py
+
 # Run tests before starting the environment
 echo "Running pytests: backend"
 pytest --disable-warnings backend/tests
