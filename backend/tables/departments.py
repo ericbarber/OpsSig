@@ -1,4 +1,4 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql import functions as F
 from config.backend_config import table_paths
 from config.spark_setup import get_spark_session
@@ -28,7 +28,7 @@ def create_departments_table():
 # Select details departments table
 def get_department_by_id(department_id):
     return spark.sql(f"""
-        SELECT * FROM `{table_paths['departments']}`
+        SELECT * FROM delta.`{table_paths['departments']}`
         WHERE department_id = '{department_id}'
     """)
 
@@ -36,9 +36,12 @@ def get_department_by_id(department_id):
 def insert_department_data(department_data):
     # Retrieve the schema from the Delta table
     table_schema = spark.read.format("delta").load(table_paths['departments']).schema
+
+    # Convert the list of department data to a Row object
+    department_row = Row(*table_schema.fieldNames())(*department_data)
     
     # Convert list of data to DataFrame
-    df = spark.createDataFrame(department_data, schema=table_schema)
+    df = spark.createDataFrame([department_row], schema=table_schema)
 
     # Insert into departments table
     df.withColumn("created_timestamp", F.to_timestamp("created_timestamp")) \
@@ -74,7 +77,23 @@ def delete_department(department_id):
 
 # Merge (upsert) data into the departments table
 def merge_department_data(department_data):
-    df = spark.createDataFrame(department_data, ["department_id", "department_name", "lead_name", "lead_email", "point_of_contact_name", "point_of_contact_email", "created_timestamp", "modified_timestamp"])
+    # Retrieve the schema from the Delta table
+    table_schema = spark.read.format("delta").load(table_paths['departments']).schema
+    table_schema = table_schema[:-2]
+
+    # Convert the list of department data to a Row object
+    # Manually create a Row object with the correct field mappings
+    department_row = Row(
+        department_id=department_data[0],
+        department_name=department_data[1],
+        lead_name=department_data[2],
+        lead_email=department_data[3],
+        point_of_contact_name=department_data[4],
+        point_of_contact_email=department_data[5]
+    )
+    
+    # Convert list of data to DataFrame
+    df = spark.createDataFrame([department_row], schema=table_schema)
     
     # Merge new data into the table
     df.createOrReplaceTempView("source_table")

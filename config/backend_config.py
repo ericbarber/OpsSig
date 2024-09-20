@@ -10,7 +10,7 @@ table_paths = {
 
 # Table paths for examples
 example_paths = {
-    "high_precission": "mnt/delta/opssig/examples/high_precission",
-    "medium_precission": "mnt/delta/opssig/examples/medium_precission",
-    "low_precission": "mnt/delta/opssig/examples/low_precission",
+    "high_precission": "/mnt/delta/opssig/examples/high_precission",
+    "medium_precission": "/mnt/delta/opssig/examples/medium_precission",
+    "low_precission": "/mnt/delta/opssig/examples/low_precission",
 }

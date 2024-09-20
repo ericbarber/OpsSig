@@ -1,4 +1,4 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql import functions as F
 from config.backend_config import table_paths
 from config.spark_setup import get_spark_session
@@ -29,7 +29,7 @@ def create_features_table():
 # Select details departments table
 def get_feature_by_id(feature_id):
     return spark.sql(f"""
-        SELECT * FROM `{table_paths['features']}`
+        SELECT * FROM delta.`{table_paths['features']}`
         WHERE feature_id = '{feature_id}'
     """)
 
@@ -72,11 +72,29 @@ def delete_feature(feature_id):
 
 # Merge (upsert) data into the features table
 def merge_feature_data(feature_data):
-    df = spark.createDataFrame(feature_data, ["department_id", "feature_id", "feature_name", "feature_version", "feature_query_id", "feature_logic", "triage_team", "created_timestamp", "modified_timestamp"])
+    # Retrieve the schema from the Delta table
+    table_schema = spark.read.format("delta").load(table_paths['features']).schema
+    table_schema = table_schema[:-2]
+
+    # Convert the list of feature data to a Row object
+    # Manually create a Row object with the correct field mappings
+    department_row = Row(
+        department_id=feature_data[0],
+        feature_id=feature_data[1],
+        feature_name=feature_data[2],
+        feature_version=feature_data[3],
+        feature_query_id=feature_data[4],
+        feature_logic=feature_data[5],
+        triage_team=feature_data[6]
+    )
+
+
+    # Convert list of data to DataFrame
+    df = spark.createDataFrame([department_row], schema=table_schema)
     
     # Merge new data into the table
     df.createOrReplaceTempView("source_table")
-
+    
     spark.sql(f"""
         MERGE INTO delta.`{table_paths['features']}` AS target
         USING source_table AS source
