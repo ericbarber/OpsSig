@@ -120,7 +120,6 @@ def delete_control_run(control_run_id):
     delta_table.delete(F.col("control_run_id") == control_run_id)
     print(f"Control run {control_run_id} deleted successfully.")
 
-
 def delete_control_run_by_id_version(control_id, control_version):
     delta_table = DeltaTable.forName(spark, control_runs_table_name)
     delta_table.delete(

@@ -4,8 +4,6 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from config.backend import table_details
 
-from unittest.mock import patch, MagicMock
-
 # Initialize Spark session
 spark = SparkSession.builder.getOrCreate()
 
